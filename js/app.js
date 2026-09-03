@@ -28,6 +28,7 @@ const state = {
   keepAwake: true,
   wakeLock: null,
   sim: null,
+  savedAt: 0,
   lastFixAt: 0,
 };
 
@@ -42,6 +43,7 @@ function save() {
       rate: state.rate,
       autoplay: state.autoplay,
       keepAwake: state.keepAwake,
+      savedAt: Date.now(),
     }));
   } catch (e) { /* private mode, quota — non-fatal */ }
 }
@@ -53,6 +55,7 @@ function load() {
     const d = JSON.parse(raw);
     if (Array.isArray(d.played)) state.played = new Set(d.played);
     if (typeof d.reversed === 'boolean') state.reversed = d.reversed;
+    state.savedAt = d.savedAt || 0;
     if (d.voiceURI) state.voiceURI = d.voiceURI;
     if (typeof d.rate === 'number') state.rate = d.rate;
     if (typeof d.autoplay === 'boolean') state.autoplay = d.autoplay;
@@ -213,6 +216,7 @@ setInterval(() => {
 const PASSED_MARGIN = 800;    // m of recession that counts as "we've gone by"
 const CATCH_RANGE   = 6000;   // m — how close we must have come to count a pass-by
 const MAX_QUEUE     = 3;      // stops that may back up behind the current one
+const SIM_LABEL     = '▶ Test drive (does not use up stops)';
 
 /* stop id -> index in travel order, for the current direction. */
 function routeRank() {
@@ -478,14 +482,35 @@ function renderList() {
 function toggleSim() {
   if (state.sim) {
     clearInterval(state.sim.timer);
+    // Put the real progress back. Without this, testing the guide the night
+    // before would mark every stop played and leave it silent on the drive.
+    state.played = state.sim.savedPlayed;
+    state.skipped = state.sim.savedSkipped;
+    state.minDist = state.sim.savedMin;
+    state.queue = [];
+    stopSpeaking();
     state.sim = null;
-    $('#btn-sim').textContent = '▶ Test drive';
+    save();
+    render();
+    renderList();
+    $('#btn-sim').textContent = SIM_LABEL;
+    setStatus('Test drive ended — your route progress is unchanged.', 'warn');
     startWatching();
     return;
   }
   if (state.watchId != null) { navigator.geolocation.clearWatch(state.watchId); state.watchId = null; }
   const ord = orderedStops();
-  const sim = { i: 0, t: 0, timer: null };
+  const sim = {
+    i: 0, t: 0, timer: null,
+    savedPlayed: new Set(state.played),
+    savedSkipped: new Set(state.skipped),
+    savedMin: state.minDist,
+  };
+  // Run the test against a clean slate so every stop actually demonstrates.
+  state.played = new Set();
+  state.skipped = new Set();
+  state.minDist = {};
+  state.queue = [];
   sim.timer = setInterval(() => {
     const a = ord[sim.i], b = ord[Math.min(sim.i + 1, ord.length - 1)];
     const f = sim.t;
@@ -594,6 +619,25 @@ function init() {
     if (v) u.voice = v;
     u.rate = state.rate;
     synth.speak(u);
+  });
+
+  // Progress from a previous session is usually stale by the next morning.
+  // Silently resuming it would mean nothing plays on the actual drive.
+  const stale = state.played.size > 0 &&
+                (!state.savedAt || Date.now() - state.savedAt > 6 * 3600 * 1000);
+  if (state.played.size > 0) {
+    const hrs = state.savedAt ? Math.round((Date.now() - state.savedAt) / 3600000) : null;
+    $('#resume').hidden = false;
+    $('#resume-text').textContent =
+      state.played.size + ' of ' + ROUTE.stops.length + ' stops are marked played' +
+      (hrs != null ? ' from about ' + (hrs < 1 ? 'an hour' : hrs + ' hours') + ' ago' : '') +
+      (stale ? '. Starting a new drive? Clear them, or they will not play again.' : '.');
+    $('#resume').className = 'card' + (stale ? ' warnbox' : '');
+  }
+  $('#btn-clear').addEventListener('click', () => {
+    state.played.clear(); state.skipped.clear(); state.minDist = {}; state.queue = [];
+    save(); render(); renderList();
+    $('#resume').hidden = true;
   });
 
   renderList();

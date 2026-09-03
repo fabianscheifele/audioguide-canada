@@ -91,6 +91,8 @@
   .ghost{width:100%;padding:12px;margin-top:10px;border-radius:11px;border:1px solid var(--line);
     background:transparent;color:var(--dim);font-size:14px;font-weight:600}
   .foot{color:var(--dim);font-size:12.5px;margin-top:24px;line-height:1.6}
+  .warnbox{border-color:var(--warn)!important}
+  .warnbox #resume-text{color:var(--warn)}
 </style>
 </head>
 <body>
@@ -109,6 +111,11 @@
       <li><strong>Connect the car audio</strong> before you tap start, so narration comes through the speakers.</li>
       <li>Tapping start grants location access and unlocks audio — iOS requires a tap for both.</li>
     </ul>
+
+    <div class="card" id="resume" hidden>
+      <div id="resume-text"></div>
+      <button class="ghost" id="btn-clear">Clear progress and start fresh</button>
+    </div>
 
     <button class="big" id="btn-start">Start the guide</button>
   </section>
@@ -154,7 +161,7 @@
       <label class="row"><span>Keep screen awake</span><input type="checkbox" id="keepawake"></label>
       <label class="row"><span>Driving the reverse direction</span><input type="checkbox" id="reversed"></label>
       <button class="ghost" id="btn-test-voice">Test the voice</button>
-      <button class="ghost" id="btn-sim">▶ Test drive</button>
+      <button class="ghost" id="btn-sim">▶ Test drive (does not use up stops)</button>
       <button class="ghost" id="btn-reset">Reset all stops</button>
     </section>
 

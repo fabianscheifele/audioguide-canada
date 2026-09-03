@@ -13,9 +13,12 @@ no data, no cell signal, no GPS assistance server.
 
 ## Getting it onto the phone
 
-1. Enable Pages once, in the repo: **Settings → Pages → Build and deployment →
-   Source: GitHub Actions**. The workflow in `.github/workflows/pages.yml` then
-   publishes on every push.
+1. The repository must be **public** (GitHub Pages is not available on private
+   repositories on the free plan), and Pages must be enabled once by hand:
+   **Settings → Pages → Build and deployment → Source: GitHub Actions**. The
+   workflow's built-in token is not permitted to create the Pages site itself,
+   so this step cannot be automated. After that,
+   `.github/workflows/pages.yml` publishes on every push to `main`.
 2. Open the published URL in **Safari on the iPhone**, while on Wi-Fi.
 3. **Share → Add to Home Screen.** This is what makes it run full-screen and
    keeps the cache from being evicted.
@@ -74,6 +77,11 @@ what keeps the whole guide under 100 KB.
 
 **Settings & voice → Test drive** simulates the entire route in a couple of
 minutes so you can hear the voice, check the volume, and confirm stops fire.
+
+The test drive runs against a scratch copy of your progress and restores it
+when you stop, so testing the night before does not leave the guide silent on
+the actual drive. If saved progress is more than six hours old, the start
+screen offers to clear it.
 
 ## Editing the route
 
