@@ -24,11 +24,10 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      # enablement lets the workflow turn Pages on via the API, so there is no
-      # manual repo setting to change first.
+      # Pages must be enabled once by hand (Settings -> Pages -> Source:
+      # GitHub Actions). The default workflow token is not permitted to create
+      # the Pages site itself, so `enablement: true` does not help here.
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
