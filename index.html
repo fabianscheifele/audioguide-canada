@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hinton → Clearwater Audio Guide</title>
+<meta name="description" content="Offline GPS-triggered audio guide for the drive from Hinton, Alberta to Clearwater, British Columbia.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f1620">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Road Guide">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+  :root{
+    --bg:#0f1620; --panel:#18222f; --panel2:#1f2c3d; --line:#2b3a4e;
+    --text:#e9eef5; --dim:#9fb0c4; --accent:#f0a04b; --good:#5cc98a; --warn:#e8c15c; --bad:#ef7b7b;
+  }
+  *{box-sizing:border-box}
+  /* Must beat the id/class display rules below, or hidden sections still show. */
+  [hidden]{display:none!important}
+  html,body{margin:0;background:var(--bg);color:var(--text);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,Segoe UI,Roboto,sans-serif;
+    -webkit-text-size-adjust:100%}
+  body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  .wrap{max-width:720px;margin:0 auto;padding:16px 16px 48px}
+  h1{font-size:22px;line-height:1.25;margin:0 0 4px;letter-spacing:-.01em}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--dim);margin:28px 0 10px;font-weight:600}
+  .sub{color:var(--dim);font-size:14px;margin:0}
+
+  /* ---- start gate ---- */
+  #gate{min-height:82vh;display:flex;flex-direction:column;justify-content:center;gap:18px}
+  .big{width:100%;padding:22px;border:0;border-radius:16px;background:var(--accent);color:#20160a;
+    font-size:20px;font-weight:700;letter-spacing:-.01em}
+  .big:active{transform:scale(.99)}
+  .checklist{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .checklist li{margin:9px 0;color:var(--dim);font-size:14.5px}
+  .checklist strong{color:var(--text)}
+
+  /* ---- status ---- */
+  .status{font-size:13.5px;padding:9px 12px;border-radius:10px;background:var(--panel);
+    border:1px solid var(--line);color:var(--dim);margin:12px 0}
+  .status.good{color:var(--good);border-color:#245a3d}
+  .status.warn{color:var(--warn);border-color:#5d4f22}
+  .status.bad{color:var(--bad);border-color:#5d2a2a}
+
+  .bar{height:6px;background:var(--panel);border-radius:99px;overflow:hidden;margin:10px 0 4px}
+  .bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .6s}
+  .barrow{display:flex;justify-content:space-between;font-size:12px;color:var(--dim)}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:12px 0}
+  #nextcard{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  #next-name{font-weight:650;font-size:17px}
+  #next-dist{color:var(--accent);font-variant-numeric:tabular-nums;font-size:15px;white-space:nowrap}
+
+  #now{border-color:var(--accent);background:var(--panel2)}
+  #now-name{font-size:20px;font-weight:700;letter-spacing:-.01em}
+  #now-sub{color:var(--dim);font-size:14px;margin-bottom:8px}
+  #now-body{max-height:44vh;overflow-y:auto;-webkit-overflow-scrolling:touch;font-size:16.5px}
+  #now-body p{margin:0 0 12px;color:var(--dim);transition:color .2s}
+  #now-body p.speaking{color:var(--text);font-weight:500}
+  .controls{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .controls button{flex:1;min-width:96px;padding:13px 10px;border-radius:11px;border:1px solid var(--line);
+    background:var(--panel);color:var(--text);font-size:15px;font-weight:600}
+  #queue-note{font-size:12px;color:var(--dim);margin-top:8px}
+
+  ul{list-style:none;padding:0;margin:0}
+  .stop{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:13px 14px;
+    border:1px solid var(--line);border-radius:12px;margin-bottom:8px;background:var(--panel)}
+  .stop.done{opacity:.45}
+  .stop.active{border-color:var(--accent);background:var(--panel2);opacity:1}
+  .stop.passed{opacity:.8;border-color:#5d4f22}
+  .stop.passed .stop-sub{color:var(--warn)}
+  .stop-name{font-weight:600;font-size:15.5px}
+  .stop-sub{color:var(--dim);font-size:13px}
+  .stop-meta{text-align:right;font-size:12px;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .stop-meta .dist{display:block;color:var(--accent)}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center}
+  .grid div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 4px}
+  .grid span{display:block;font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+  .grid b{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+
+  label.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;
+    border-bottom:1px solid var(--line);font-size:15px}
+  label.row:last-of-type{border-bottom:0}
+  select,input[type=range]{background:var(--panel2);color:var(--text);border:1px solid var(--line);
+    border-radius:9px;padding:8px;font-size:14px;max-width:58%}
+  input[type=checkbox]{width:26px;height:26px;accent-color:var(--accent)}
+  .ghost{width:100%;padding:12px;margin-top:10px;border-radius:11px;border:1px solid var(--line);
+    background:transparent;color:var(--dim);font-size:14px;font-weight:600}
+  .foot{color:var(--dim);font-size:12.5px;margin-top:24px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <section id="gate">
+    <div>
+      <h1 id="route-title">Hinton → Clearwater</h1>
+      <p class="sub" id="route-sub"></p>
+    </div>
+
+    <ul class="checklist">
+      <li><strong>Before you lose signal:</strong> open this page once on Wi-Fi so it caches. After that it needs no data at all.</li>
+      <li><strong>Add to Home Screen</strong> (Share → Add to Home Screen) so it opens full-screen and stays cached.</li>
+      <li><strong>Keep the screen on.</strong> iOS suspends web pages when the phone locks. Settings → Display &amp; Brightness → Auto-Lock → Never, and keep the phone plugged in and mounted.</li>
+      <li><strong>Connect the car audio</strong> before you tap start, so narration comes through the speakers.</li>
+      <li>Tapping start grants location access and unlocks audio — iOS requires a tap for both.</li>
+    </ul>
+
+    <button class="big" id="btn-start">Start the guide</button>
+  </section>
+
+  <main id="main" hidden>
+    <h1 id="route-title-2" style="font-size:19px">Hinton → Clearwater</h1>
+    <div id="status" class="status">Starting…</div>
+
+    <div class="bar"><i id="progress"></i></div>
+    <div class="barrow"><span id="progress-label">0 of 0</span><span>stops played</span></div>
+
+    <div class="card" id="nextcard" hidden>
+      <div><span style="font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.07em">Next stop</span>
+        <div id="next-name">—</div></div>
+      <div id="next-dist">—</div>
+    </div>
+
+    <div class="card" id="now" hidden>
+      <div id="now-name">—</div>
+      <div id="now-sub"></div>
+      <div id="now-body"></div>
+      <div class="controls">
+        <button id="btn-pause">❚❚ Pause</button>
+        <button id="btn-replay">↺ Replay</button>
+        <button id="btn-skip">↦ Skip</button>
+      </div>
+      <div id="queue-note"></div>
+    </div>
+
+    <div class="grid">
+      <div><span>Position</span><b id="fix">—</b></div>
+      <div><span>Accuracy</span><b id="acc">—</b></div>
+      <div><span>Speed</span><b id="spd">—</b></div>
+    </div>
+
+    <button class="ghost" id="btn-settings">Settings &amp; voice</button>
+
+    <section id="settings" class="card" hidden>
+      <label class="row"><span>Voice</span><select id="voice"></select></label>
+      <label class="row"><span>Speed <b id="rate-val">1.00×</b></span>
+        <input type="range" id="rate" min="0.7" max="1.4" step="0.05"></label>
+      <label class="row"><span>Play automatically at each stop</span><input type="checkbox" id="autoplay"></label>
+      <label class="row"><span>Keep screen awake</span><input type="checkbox" id="keepawake"></label>
+      <label class="row"><span>Driving the reverse direction</span><input type="checkbox" id="reversed"></label>
+      <button class="ghost" id="btn-test-voice">Test the voice</button>
+      <button class="ghost" id="btn-sim">▶ Test drive</button>
+      <button class="ghost" id="btn-reset">Reset all stops</button>
+    </section>
+
+    <h2>All stops</h2>
+    <ul id="stops"></ul>
+
+    <p class="foot">Tap any stop to play it on demand. Stops fire automatically when you drive
+    within range, and again on closest approach if the coordinate sits slightly off the highway.
+    Everything runs on your phone — no network, no tracking, nothing leaves the device.</p>
+  </main>
+</div>
+
+<audio id="keepalive" playsinline preload="auto"></audio>
+<script src="js/route.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
