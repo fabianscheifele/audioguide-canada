@@ -66,9 +66,15 @@ it does not replay everything.
 ## Voice
 
 Narration uses the iPhone's built-in speech synthesis, which runs entirely
-on-device. Pick a voice under **Settings & voice** — the enhanced Siri voices
-sound considerably better than the default and are worth downloading before you
-leave (Settings → Accessibility → Spoken Content → Voices).
+on-device. Pick a voice under **Settings & voice** — the enhanced voices sound
+considerably better than the default and are worth downloading before you leave
+(Settings → Accessibility → Spoken Content → Voices).
+
+Safari returns an empty voice list on the first call and its `voiceschanged`
+event does not fire reliably on iOS, so the app polls for voices for a few
+seconds after launch, refreshes the list whenever it returns to the foreground,
+and offers a **Refresh voice list** button. A voice downloaded in iOS Settings
+while the app is open will appear on returning to it.
 
 There are no audio files to download; the text is spoken on demand. That is
 what keeps the whole guide under 100 KB.
@@ -99,9 +105,15 @@ the closest-approach rule covers the rest.
 index.html              UI shell, styles
 js/route.js             all 36 stops and their narration
 js/app.js               GPS watch, trigger engine, speech queue
-sw.js                   service worker — precaches everything for offline use
+sw.js                   service worker — precache, network-first with fallback
 manifest.webmanifest    home-screen install metadata
 ```
+
+The service worker is network-first with a 2.5 second timeout, falling back to
+cache. On Wi-Fi that means a new deploy is always picked up rather than being
+trapped behind a stale cache; with no signal each request gives up quickly and
+is served from cache. Once the page is open it makes no further requests at
+all, because the route data is part of the loaded page.
 
 No dependencies, no build step, no network calls at runtime. Nothing about your
 location leaves the phone.

@@ -90,18 +90,31 @@ function orderedStops() {
 const synth = window.speechSynthesis;
 let voices = [];
 
+let voiceSig = null;      // so we only rebuild the menu when the list changes
+let voicePollTimer = null;
+
 function loadVoices() {
   voices = synth ? synth.getVoices() : [];
   const sel = $('#voice');
-  if (!sel) return;
-  const prev = state.voiceURI;
-  sel.innerHTML = '';
+  if (!sel) return voices.length;
+
   const english = voices.filter(v => /^en/i.test(v.lang));
   const list = english.length ? english : voices;
+
+  const sig = list.map(v => v.voiceURI).join('|');
+  if (sig === voiceSig) return voices.length;   // nothing new
+  voiceSig = sig;
+
+  const prev = state.voiceURI;
+  sel.innerHTML = '';
+  const note = $('#voice-note');
+
   if (!list.length) {
     sel.innerHTML = '<option value="">System default</option>';
-    return;
+    if (note) note.textContent = 'No voices reported yet — tap Refresh.';
+    return 0;
   }
+
   // Prefer en-CA, then en-GB, then en-US, then anything English.
   const rank = (v) => /en[-_]CA/i.test(v.lang) ? 0 : /en[-_]GB/i.test(v.lang) ? 1
                     : /en[-_]US/i.test(v.lang) ? 2 : 3;
@@ -114,6 +127,19 @@ function loadVoices() {
   }
   if (prev && list.some(v => v.voiceURI === prev)) sel.value = prev;
   else { state.voiceURI = list[0].voiceURI; sel.value = state.voiceURI; }
+  if (note) note.textContent = list.length + ' voices available';
+  return voices.length;
+}
+
+/* Safari returns an empty voice list on the first call and its voiceschanged
+ * event is unreliable on iOS, so ask repeatedly for a while instead of once.
+ * This is also how a voice downloaded in iOS Settings after the app was opened
+ * finds its way into the menu. */
+function pollVoices(attempts) {
+  clearTimeout(voicePollTimer);
+  const found = loadVoices();
+  if (found || attempts <= 0) return;
+  voicePollTimer = setTimeout(() => pollVoices(attempts - 1), 500);
 }
 
 if (synth) {
@@ -332,6 +358,7 @@ async function requestWakeLock() {
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') {
+    pollVoices(10);
     if (state.started) { requestWakeLock(); startWatching(); }
   }
 });
@@ -545,7 +572,7 @@ function start() {
   requestWakeLock();
   startWatching();
   setStatus('Getting a GPS fix…', 'warn');
-  loadVoices();
+  pollVoices(20);
   render();
   renderList();
 
@@ -562,7 +589,7 @@ function start() {
 
 function init() {
   load();
-  loadVoices();
+  pollVoices(24);
 
   $('#route-title').textContent = ROUTE.title;
   $('#route-title-2').textContent = ROUTE.title;
@@ -594,6 +621,13 @@ function init() {
   });
 
   $('#voice').addEventListener('change', (e) => { state.voiceURI = e.target.value; save(); });
+
+  $('#btn-refresh-voices').addEventListener('click', () => {
+    voiceSig = null;                 // force a rebuild even if the list matches
+    const n = loadVoices();
+    const note = $('#voice-note');
+    if (!n && note) note.textContent = 'Still none. Fully close and reopen the app.';
+  });
 
   const auto = $('#autoplay');
   auto.checked = state.autoplay;

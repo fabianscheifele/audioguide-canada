@@ -91,6 +91,7 @@
   .ghost{width:100%;padding:12px;margin-top:10px;border-radius:11px;border:1px solid var(--line);
     background:transparent;color:var(--dim);font-size:14px;font-weight:600}
   .foot{color:var(--dim);font-size:12.5px;margin-top:24px;line-height:1.6}
+  .note{font-size:12.5px;color:var(--dim);padding:2px 0 8px}
   .warnbox{border-color:var(--warn)!important}
   .warnbox #resume-text{color:var(--warn)}
 </style>
@@ -155,6 +156,8 @@
 
     <section id="settings" class="card" hidden>
       <label class="row"><span>Voice</span><select id="voice"></select></label>
+      <div id="voice-note" class="note">Looking for voices…</div>
+      <button class="ghost" id="btn-refresh-voices">↻ Refresh voice list</button>
       <label class="row"><span>Speed <b id="rate-val">1.00×</b></span>
         <input type="range" id="rate" min="0.7" max="1.4" step="0.05"></label>
       <label class="row"><span>Play automatically at each stop</span><input type="checkbox" id="autoplay"></label>
