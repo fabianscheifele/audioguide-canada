@@ -643,8 +643,21 @@ function init() {
   });
 
   const rev = $('#reversed');
+  const dir = $('#dir');
   rev.checked = state.reversed;
-  rev.addEventListener('change', () => { state.reversed = rev.checked; save(); render(); renderList(); });
+  dir.value = state.reversed ? 'rev' : 'fwd';
+
+  // The same setting is offered on the start screen and in settings, because
+  // the direction has to be chosen before Start (it decides which briefing
+  // plays) but should still be changeable mid-drive.
+  function setDirection(reversed) {
+    state.reversed = reversed;
+    rev.checked = reversed;
+    dir.value = reversed ? 'rev' : 'fwd';
+    save(); render(); renderList();
+  }
+  rev.addEventListener('change', () => setDirection(rev.checked));
+  dir.addEventListener('change', () => setDirection(dir.value === 'rev'));
 
   $('#btn-test-voice').addEventListener('click', () => {
     stopSpeaking();
